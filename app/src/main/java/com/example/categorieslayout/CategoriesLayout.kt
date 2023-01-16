@@ -3,15 +3,107 @@ package com.example.categorieslayout
 import android.content.Context
 import android.icu.text.MeasureFormat.FormatWidth
 import android.util.AttributeSet
+import android.util.Log
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams.WRAP_CONTENT
 import android.widget.TextView
 import androidx.core.content.contentValuesOf
+import androidx.core.view.marginBottom
+import androidx.core.view.marginLeft
+import androidx.core.view.marginRight
+import androidx.core.view.marginTop
+import java.lang.StrictMath.max
 
 class CategoriesLayout(context: Context, attributeSet: AttributeSet) :
     ViewGroup(context, attributeSet) {
+    /**
+     * @param changed Вне зависимости от него вызывается onLayout
+     * [l] [t] [r] [b] -- координаты Layout
+     */
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        addView(TextView(context))
+        Log.d("CategorLayout", "onLayout(): changed = $changed, l = $l, t = $t, r = $r, b = $b")
+        // Начальное значение отступа = padding
+        var offset = paddingLeft
+        val rightBound = r - l - paddingRight  // r - правая граница, вычтем l - расстояние до самой view group, вычтем paddingRight
+
+        for (i in 0 until childCount) {
+            // Доступ к ребенку
+            var child = getChildAt(i)
+            //
+            var lp = child.layoutParams as MyLayoutParams
+
+            val childL = offset + lp.leftMargin // учитываем свой padding и margin ребенка
+            val childT = paddingTop + lp.topMargin
+            val childR = childL + child.measuredWidth
+            val childB =
+                childT + child.measuredHeight  // paddingRight и paddingBottom учитываются в onMeasure, помещаемся ли в родителя (childMeasuredState)
+
+            // Переходим в это условие, только если в measureChildWithMargins занулили widthUsed
+            if (childR <= rightBound) {  // отрисовываем только в случае , если правая граница ребенка не выходит за наш правый край
+                child.layout(
+                    childL,
+                    childT,
+                    childR,
+                    childB
+                )  // другая координатная сетка! Не та, что в onLayout!
+                // инкрементируем offset: координата ребенка и margin ребенка
+                offset = childR + lp.rightMargin
+            }
+        }
+    }
+
+    override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
+        Log.d("CategorLayout", "onIntercept: ${ev.toString()}")
+        return super.onInterceptTouchEvent(ev)
+    }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        Log.d("CategorLayout", "onTouch: ${event.toString()}")
+        return super.onTouchEvent(event)
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        var requestedWidth = 0
+        var requestedHeight = 0
+        var childMeasuredState = 0
+
+        for (i in 0 until childCount) {
+            // Доступ к ребенку
+            var child = getChildAt(i)
+            // Доступ к layout params ребенка, кастим к MyLayoutParams
+            var lp = child.layoutParams as MyLayoutParams
+            // Вызов onMeasure для детей.
+            // width-, heightMeasureSpec пробрасываем,
+            // requestedWidth - использованая ширина,
+            // requestedHeight - в нашем случае не важно, = 0
+            // В методе getChildMeasureSpec учитываются padding ViewGroup, margin ребенка (MarginLayoutParams child.getLayoutParams)
+            // затем вызываем child.measure
+            measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, 0)  // Занулить widthUsed, чтобы child считал, что ему доступно все свободное место
+            // Обязательно учесть margin ребенка
+            requestedWidth += child.measuredWidth + lp.leftMargin + lp.rightMargin
+            requestedHeight =
+                max(requestedHeight, child.measuredHeight + lp.topMargin + lp.bottomMargin)
+            childMeasuredState = combineMeasuredStates(childMeasuredState, child.measuredState)
+        }
+
+        // Учтем свои padding-и
+        requestedWidth += paddingLeft + paddingRight
+        requestedHeight += paddingTop + paddingBottom
+
+        requestedWidth = max(suggestedMinimumWidth, requestedWidth)
+        requestedHeight = max(suggestedMinimumHeight, requestedHeight)
+
+        // Устанавливаем размеры View с учетом childState, в котором зашиты width и height,
+        // который достаем с помощью shl
+        setMeasuredDimension(
+            resolveSizeAndState(requestedWidth, widthMeasureSpec, childMeasuredState),
+            resolveSizeAndState(
+                requestedHeight,
+                heightMeasureSpec,
+                childMeasuredState shl MEASURED_HEIGHT_STATE_SHIFT
+            )
+        )
     }
 
     /**
