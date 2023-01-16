@@ -18,6 +18,7 @@ import java.lang.StrictMath.max
 class CategoriesLayout(context: Context, attributeSet: AttributeSet) :
     ViewGroup(context, attributeSet) {
     /**
+     * Размещает элементы на экране
      * @param changed Вне зависимости от него вызывается onLayout
      * [l] [t] [r] [b] -- координаты Layout
      */
@@ -53,16 +54,27 @@ class CategoriesLayout(context: Context, attributeSet: AttributeSet) :
         }
     }
 
+    /**
+     * Срабатывает при нажатии на кнопку и нажатии на view group
+     */
     override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
         Log.d("CategorLayout", "onIntercept: ${ev.toString()}")
         return super.onInterceptTouchEvent(ev)
     }
 
+    /**
+     * Срабатывает при нажатии на view group
+     */
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         Log.d("CategorLayout", "onTouch: ${event.toString()}")
         return super.onTouchEvent(event)
     }
 
+    /**
+     * Измерение себя и вызов measure у дочерних View
+     * @param widthMeasureSpec
+     * @param heightMeasureSpec
+     */
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         var requestedWidth = 0
         var requestedHeight = 0
@@ -71,8 +83,10 @@ class CategoriesLayout(context: Context, attributeSet: AttributeSet) :
         for (i in 0 until childCount) {
             // Доступ к ребенку
             var child = getChildAt(i)
+
             // Доступ к layout params ребенка, кастим к MyLayoutParams
             var lp = child.layoutParams as MyLayoutParams
+
             // Вызов onMeasure для детей.
             // width-, heightMeasureSpec пробрасываем,
             // requestedWidth - использованая ширина,
@@ -80,6 +94,7 @@ class CategoriesLayout(context: Context, attributeSet: AttributeSet) :
             // В методе getChildMeasureSpec учитываются padding ViewGroup, margin ребенка (MarginLayoutParams child.getLayoutParams)
             // затем вызываем child.measure
             measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, 0)  // Занулить widthUsed, чтобы child считал, что ему доступно все свободное место
+
             // Обязательно учесть margin ребенка
             requestedWidth += child.measuredWidth + lp.leftMargin + lp.rightMargin
             requestedHeight =
@@ -108,7 +123,7 @@ class CategoriesLayout(context: Context, attributeSet: AttributeSet) :
 
     /**
      * Для добавления возможностей layout params
-     * Чтение атрибутов из xml-файла
+     * Чтение атрибутов [attrs] из xml-файла
      */
     override fun generateLayoutParams(attrs: AttributeSet?): ViewGroup.LayoutParams {
         return MyLayoutParams(context, attrs)
@@ -137,7 +152,7 @@ class CategoriesLayout(context: Context, attributeSet: AttributeSet) :
 
     /**
      * Для добавления возможностей layout params
-     * Является ли p наследником определенного нами MyLayoutParams?
+     * Является ли [p] наследником определенного нами MyLayoutParams?
      * Необходима дополнительная проверка, т к addView(TextView, ViewGroup.LayoutParams) принимает общий класс
      * Иначе вызывается generateLayoutParams(ViewGroup.LayoutParams)
      */
